@@ -25,6 +25,7 @@ func (a *ArgType) TemplateLoader(name string) ([]byte, error) {
 func (a *ArgType) TemplateSet() *TemplateSet {
 	if a.templateSet == nil {
 		a.templateSet = &TemplateSet{
+			// 定义在 internal/funcs.go
 			funcs: a.NewTemplateFuncs(),
 			l:     a.TemplateLoader,
 			tpls:  map[string]*template.Template{},
@@ -63,6 +64,9 @@ func (a *ArgType) ExecuteTemplate(tt TemplateType, name string, sub string, obj 
 			loaderType = a.LoaderType + "."
 		}
 	}
+	// loaderType 其实就是driver名称，比如 mysql 或者 pg
+	// types.go中定义的TemplateType也实现了String()方法
+	// 那么这里会生成的名字形如：mysql.index.go.tpl
 	templateName := fmt.Sprintf("%s%s.go.tpl", loaderType, tt)
 
 	// execute template
@@ -94,6 +98,7 @@ func (ts *TemplateSet) Execute(w io.Writer, name string, obj interface{}) error 
 		}
 
 		// parse template
+		// 注入自定义template函数
 		tpl, err = template.New(name).Funcs(ts.funcs).Parse(string(buf))
 		if err != nil {
 			return err

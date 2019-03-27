@@ -39,6 +39,7 @@ type Loader interface {
 }
 
 // SchemaLoaders are the available schema loaders.
+// 全局map，loaders包中有针对各个驱动的loader，在初始化的时候会注入到这个map中
 var SchemaLoaders = map[string]Loader{}
 
 // TypeLoader provides a common Loader implementation used by the built in
@@ -96,6 +97,7 @@ func (tl TypeLoader) Relkind(rt RelType) string {
 		return tl.ProcessRelkind(rt)
 	}
 
+	// internal/types.go中定义有RelType类型的string方法
 	return rt.String()
 }
 
@@ -260,6 +262,7 @@ func (tl TypeLoader) LoadSchema(args *ArgType) error {
 	}
 
 	// load tables
+	// 这个Table定义于 /internal/types.go 中
 	tableMap, err := tl.LoadRelkind(args, Table)
 	if err != nil {
 		return err
@@ -461,12 +464,14 @@ func (tl TypeLoader) LoadRelkind(args *ArgType, relType RelType) (map[string]*Ty
 	var err error
 
 	// load tables
+	// 这里获取的是数据库里所有的表名
 	tableList, err := tl.TableList(args.DB, args.Schema, tl.Relkind(relType))
 	if err != nil {
 		return nil, err
 	}
 
 	// tables
+	// Type 定义在internal/types.go中
 	tableMap := make(map[string]*Type)
 	for _, ti := range tableList {
 		// create template
@@ -479,6 +484,7 @@ func (tl TypeLoader) LoadRelkind(args *ArgType, relType RelType) (map[string]*Ty
 		}
 
 		// process columns
+		// 加载表字段
 		err = tl.LoadColumns(args, typeTpl)
 		if err != nil {
 			return nil, err
@@ -489,6 +495,9 @@ func (tl TypeLoader) LoadRelkind(args *ArgType, relType RelType) (map[string]*Ty
 
 	// generate table templates
 	for _, t := range tableMap {
+		// TypeTemplate 依旧定义在internal/types.go中
+		// 它是一个TemplateType类型，而这个类型是一个枚举类型
+		// 用于标识模板类型
 		err = args.ExecuteTemplate(TypeTemplate, t.Name, "", t)
 		if err != nil {
 			return nil, err
@@ -529,10 +538,13 @@ func (tl TypeLoader) LoadColumns(args *ArgType, typeTpl *Type) error {
 		}
 
 		// set col info
+		// 定义在internal/types.go, 代表数据库表的一个字段
 		f := &Field{
 			Name: snaker.SnakeToCamelIdentifier(c.ColumnName),
 			Col:  c,
 		}
+		// 此处实现 sql type 到 Go type 的转化, 比如 bigint --> int64
+		// 只是一个类型标识的转换，并没有真正转
 		f.Len, f.NilType, f.Type = tl.ParseType(args, c.DataType, !c.NotNull)
 
 		// set primary key
