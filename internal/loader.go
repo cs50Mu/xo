@@ -61,6 +61,8 @@ type TypeLoader struct {
 	IndexList       func(models.XODB, string, string) ([]*models.Index, error)
 	IndexColumnList func(models.XODB, string, string, string) ([]*models.IndexColumn, error)
 	QueryStrip      func([]string, []string)
+	// 这个函数的作用是获取自定义查询时用到的select字段
+	// 比如select id, name from items 中的 id 和 name
 	QueryColumnList func(*ArgType, []string) ([]*models.Column, error)
 }
 
@@ -115,6 +117,9 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 	var err error
 
 	// parse supplied query
+	// 提取出动态字段
+	// select id,name from items where name = %%itemName string%%;
+	// 被处理成 select id,name from items where name = ?;
 	queryStr, params := args.ParseQuery(tl.Mask(), true)
 	inspectStr, _ := args.ParseQuery("NULL", false)
 
@@ -152,6 +157,7 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 		Name:    args.QueryType,
 		RelType: Table,
 		Fields:  []*Field{},
+		// args.QueryType 指的是给定制查询的结果起个名字
 		Table: &models.Table{
 			TableName: "[custom " + strings.ToLower(snaker.CamelToSnake(args.QueryType)) + "]",
 		},
@@ -160,6 +166,7 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 
 	if args.QueryFields == "" {
 		// if no query fields specified, then pass to inspector
+		// 获取select 字段
 		colList, err := tl.QueryColumnList(args, inspect)
 		if err != nil {
 			return err
@@ -198,15 +205,18 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 	}
 
 	// generate query type template
+	// 这里是生成struct结构体的代码
 	err = args.ExecuteTemplate(QueryTypeTemplate, args.QueryType, "", typeTpl)
 	if err != nil {
 		return err
 	}
 
 	// build func name
+	// 可以自定义生成的函数名称
 	funcName := args.QueryFunc
 	if funcName == "" {
 		// no func name specified, so generate based on type
+		// 没提供自定义名称的话，默认使用传入的QueryType字段
 		if args.QueryOnlyOne {
 			funcName = args.QueryType
 		} else {
@@ -214,6 +224,7 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 		}
 
 		// affix any params
+		// 为了尽量起个有意义的名字也是操碎了心
 		if len(params) == 0 {
 			funcName = "Get" + funcName
 		} else {
@@ -237,6 +248,7 @@ func (tl TypeLoader) ParseQuery(args *ArgType) error {
 	}
 
 	// generate template
+	// 这里是生成查询函数的代码
 	err = args.ExecuteTemplate(QueryTemplate, args.QueryType, "", queryTpl)
 	if err != nil {
 		return err

@@ -71,6 +71,7 @@ func main() {
 	}
 
 	// load defs into type map
+	// 在这里根据args和预置的模板文件生成code
 	if args.QueryMode {
 		err = args.Loader.ParseQuery(args)
 	} else {
@@ -82,6 +83,7 @@ func main() {
 	}
 
 	// add xo
+	// 对应模板文件：xo_db.go.tpl
 	err = args.ExecuteTemplate(internal.XOTemplate, "xo_db", "", args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -89,6 +91,7 @@ func main() {
 	}
 
 	// output
+	// 在这里把生成的boilerplate code写入文件
 	err = writeTypes(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

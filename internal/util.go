@@ -26,6 +26,8 @@ func (a *ArgType) ParseQuery(mask string, interpol bool) (string, []*QueryParam)
 	)
 
 	// grab matches from query string
+	// 第一步，理解 FindStringIndex, 它返回的是一个含有两个元素的slice, 分别表示匹配到的字符的开始和结束+1, 但注意它返回的是左数第一个匹配
+	// 第二步，理解 FindAllStringIndex, 它返回的是一个二维slice，如字面所示，返回了所有的匹配
 	matches := placeholderRE.FindAllStringIndex(a.Query, -1)
 
 	// return vals and placeholders
